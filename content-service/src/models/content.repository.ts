@@ -43,6 +43,11 @@ export class ContentRepository {
     return doc ? (doc as unknown as Article) : null;
   }
 
+  public async createArticle(articleData: Partial<Article>): Promise<Article> {
+    const created = await ArticleModel.create(articleData);
+    return created.toObject() as unknown as Article;
+  }
+
   // --- Craft Stages ---
   public async findCraftStages(): Promise<CraftStage[]> {
     const docs = await CraftStageModel.find().sort({ n: 1 }).lean();

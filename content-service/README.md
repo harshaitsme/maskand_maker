@@ -63,6 +63,7 @@ content-service/
 | `GET` | `/api/traditions` | List all 3 traditions (Raksha, Sanni, Kolam) | None |
 | `GET` | `/api/traditions/:slug` | Single tradition details by slug | None |
 | `GET` | `/api/articles` | List folklore articles with optional filter | `?kind=&tradition=&q=` |
+| `POST` | `/api/articles` | Publish new folklore article, essay, or film note | JSON Body (`slug`, `title`, `excerpt`, `body`, etc.) |
 | `GET` | `/api/articles/:slug` | Full article body, reading minutes, author date | None |
 | `GET` | `/api/stages` | 8 sequential craft stages from tree selection to awakening | None |
 | `GET` | `/api/workshops` | Experiential workshop sessions and available spots | None |

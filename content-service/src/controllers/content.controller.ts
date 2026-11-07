@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { contentRepository } from "../models/content.repository.js";
 import { ContentView } from "../views/content.view.js";
-import { ArticleQuerySchema } from "../views/content.dto.js";
+import { ArticleQuerySchema, CreateArticleSchema } from "../views/content.dto.js";
 import { Tradition } from "../models/content.entity.js";
 
 /**
@@ -62,6 +62,26 @@ export class ContentController {
 
       res.setHeader("Cache-Control", "public, max-age=300");
       res.status(200).json(ContentView.renderArticle(article));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public static async createArticle(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const payload = CreateArticleSchema.parse(req.body);
+      const existing = await contentRepository.findArticleBySlug(payload.slug);
+
+      if (existing) {
+        res.status(409).json({
+          error: "Conflict",
+          message: `Article with slug '${payload.slug}' already exists`,
+        });
+        return;
+      }
+
+      const created = await contentRepository.createArticle(payload);
+      res.status(201).json(ContentView.renderArticle(created));
     } catch (error) {
       next(error);
     }

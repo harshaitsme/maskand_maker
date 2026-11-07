@@ -9,6 +9,7 @@ router.get("/traditions/:slug", ContentController.getTradition);
 
 // Articles & Essays
 router.get("/articles", ContentController.listArticles);
+router.post("/articles", ContentController.createArticle);
 router.get("/articles/:slug", ContentController.getArticle);
 
 // Craft Stages
