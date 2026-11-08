@@ -24,6 +24,8 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3004
 ENV MONGODB_URI=mongodb://host.docker.internal:27017/maskandmaker
+ENV RABBITMQ_URI=amqp://guest:guest@host.docker.internal:5672
+ENV RABBITMQ_EXCHANGE=maskandmaker.events
 
 # Copy package manifests and install production-only dependencies
 COPY package*.json ./

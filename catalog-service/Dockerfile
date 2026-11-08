@@ -25,6 +25,8 @@ ENV NODE_ENV=production
 ENV PORT=3001
 ENV MONGODB_URI=mongodb://host.docker.internal:27017/maskandmaker
 ENV MONGODB_COLLECTION=catalog-svc
+ENV RABBITMQ_URI=amqp://guest:guest@host.docker.internal:5672
+ENV RABBITMQ_EXCHANGE=maskandmaker.events
 
 # Copy package manifests and install production-only dependencies
 COPY package*.json ./
@@ -40,7 +42,7 @@ EXPOSE 3001
 
 # Healthcheck for container orchestration
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3001/health || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3001/health || exit 1
 
 # Start the catalog microservice
 CMD ["node", "dist/server.js"]

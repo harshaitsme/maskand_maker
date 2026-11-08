@@ -3,6 +3,7 @@ import cors from "cors";
 import { verifyRoutes } from "./routes/verify.routes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { isDBConnected } from "./config/db.js";
+import { VerifyEventConsumer } from "./config/rabbitmq.js";
 import { verifyRepository } from "./models/verify.repository.js";
 
 const app: Express = express();
@@ -35,6 +36,11 @@ app.get("/health", async (_req: Request, res: Response) => {
     service: "verify-service",
     domain: "nfc-qr-authentication",
     database: dbConnected ? "CONNECTED" : "DISCONNECTED",
+    eventBus: {
+      type: "RabbitMQ",
+      status: VerifyEventConsumer.isConnected() ? "CONNECTED" : "DISCONNECTED",
+      queue: "q.verify.order-events",
+    },
     registry: stats,
     uptimeSeconds: Math.floor(process.uptime()),
     timestamp: new Date().toISOString(),

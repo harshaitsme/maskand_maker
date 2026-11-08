@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 import { createApp } from "./app.js";
 import { connectDB, disconnectDB } from "./config/db.js";
+import { CatalogEventConsumer } from "./config/rabbitmq.js";
 import { maskRepository } from "./models/mask.repository.js";
 import { initialMasks } from "./models/seed.data.js";
 import { MaskModel } from "./models/mask.schema.js";
@@ -16,7 +17,12 @@ async function startServer() {
     // 1. Establish MongoDB connection
     await connectDB();
 
-    // 2. Check if collection is empty; auto-seed if needed
+    // 2. Establish RabbitMQ event consumer
+    CatalogEventConsumer.start().catch((err) => {
+      console.warn("⚠️ RabbitMQ consumer startup deferred:", err.message);
+    });
+
+    // 3. Check if collection is empty; auto-seed if needed
     const count = await maskRepository.count();
     if (count === 0) {
       console.log(`📦 Collection '${MaskModel.collection.name}' is empty. Auto-seeding initial 18 masks...`);
@@ -40,6 +46,7 @@ async function startServer() {
     async function handleShutdown(signal: string) {
       console.log(`\n[${signal}] Initiating graceful shutdown...`);
       server.close(async () => {
+        await CatalogEventConsumer.stop();
         await disconnectDB();
         console.log("Catalog service stopped cleanly.");
         process.exit(0);

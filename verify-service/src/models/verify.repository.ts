@@ -137,6 +137,21 @@ export class VerifyRepository {
   }
 
   /**
+   * Append a provenance event triggered by an order event
+   */
+  public async appendProvenanceEvent(
+    maskSlug: string,
+    event: { label: string; date: string; actor: string }
+  ): Promise<CertificateDoc | null> {
+    const cert = await CertificateModel.findOne({ maskSlug: maskSlug.trim().toLowerCase() });
+    if (!cert) return null;
+
+    cert.history.push(event);
+    const saved = await cert.save();
+    return saved.toObject() as unknown as CertificateDoc;
+  }
+
+  /**
    * Register a brand new certificate (from artisan minting portal)
    */
   public async createCertificate(data: Partial<CertificateDoc>): Promise<CertificateDoc> {

@@ -3,6 +3,7 @@ dotenv.config();
 
 import app from "./app.js";
 import { connectDB, disconnectDB } from "./config/db.js";
+import { VerifyEventConsumer } from "./config/rabbitmq.js";
 import { CertificateModel } from "./models/verify.schema.js";
 import { seedCertificates } from "./models/seed.data.js";
 
@@ -15,6 +16,11 @@ async function bootstrap() {
     console.log("==================================================");
 
     await connectDB();
+
+    // 2. Start RabbitMQ Consumer
+    VerifyEventConsumer.start().catch((err) => {
+      console.warn("⚠️ RabbitMQ consumer startup deferred:", err.message);
+    });
 
     // Auto-seed if collection is empty
     const count = await CertificateModel.countDocuments();
@@ -35,6 +41,7 @@ async function bootstrap() {
     const shutdown = async (signal: string) => {
       console.log(`\n🛑 Received ${signal}. Shutting down gracefully...`);
       server.close(async () => {
+        await VerifyEventConsumer.stop();
         await disconnectDB();
         console.log("👋 Service stopped cleanly.");
         process.exit(0);
