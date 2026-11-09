@@ -1,0 +1,321 @@
+version: "3.8"
+
+networks:
+  mm-network:
+    driver: bridge
+
+volumes:
+  mongo_data:
+  minio_data:
+  rabbitmq_data:
+
+services:
+  # ==========================================
+  # Infrastructure Services
+  # ==========================================
+  mongo-db:
+    image: mongo:latest
+    container_name: mm-mongo-db
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - mm-network
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: mm-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - mm-network
+
+  minio:
+    image: minio/minio:latest
+    container_name: mm-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    volumes:
+      - minio_data:/data
+    networks:
+      - mm-network
+
+  # ==========================================
+  # Core Business Microservices
+  # ==========================================
+  catalog-service:
+    build:
+      context: ./catalog-service
+      dockerfile: Dockerfile
+    container_name: mm-catalog-svc
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - MONGODB_URI=mongodb://mongo-db:27017/maskandmaker
+      - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      - mongo-db
+      - rabbitmq
+    networks:
+      - mm-network
+
+  artisan-service:
+    build:
+      context: ./artisan-service
+      dockerfile: Dockerfile
+    container_name: mm-artisan-svc
+    restart: unless-stopped
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=production
+      - PORT=3002
+      - MONGODB_URI=mongodb://mongo-db:27017/maskandmaker
+      - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      - mongo-db
+      - rabbitmq
+    networks:
+      - mm-network
+
+  content-service:
+    build:
+      context: ./content-service
+      dockerfile: Dockerfile
+    container_name: mm-content-svc
+    restart: unless-stopped
+    ports:
+      - "3003:3003"
+    environment:
+      - NODE_ENV=production
+      - PORT=3003
+      - MONGODB_URI=mongodb://mongo-db:27017/maskandmaker
+      - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      - mongo-db
+      - rabbitmq
+    networks:
+      - mm-network
+
+  order-service:
+    build:
+      context: ./order-service
+      dockerfile: Dockerfile
+    container_name: mm-order-svc
+    restart: unless-stopped
+    ports:
+      - "3004:3004"
+    environment:
+      - NODE_ENV=production
+      - PORT=3004
+      - MONGODB_URI=mongodb://mongo-db:27017/maskandmaker
+      - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      - mongo-db
+      - rabbitmq
+    networks:
+      - mm-network
+
+  search-service:
+    build:
+      context: ./search-service
+      dockerfile: Dockerfile
+    container_name: mm-search-svc
+    restart: unless-stopped
+    ports:
+      - "3005:3005"
+    environment:
+      - NODE_ENV=production
+      - PORT=3005
+      - MONGODB_URI=mongodb://mongo-db:27017/maskandmaker
+      - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      - mongo-db
+      - rabbitmq
+    networks:
+      - mm-network
+
+  # ==========================================
+  # Web3, Verification & Portal Microservices
+  # ==========================================
+  verify-service:
+    build:
+      context: ./verify-service
+      dockerfile: Dockerfile
+    container_name: mm-verify-svc
+    restart: unless-stopped
+    ports:
+      - "3006:3006"
+    environment:
+      - NODE_ENV=production
+      - PORT=3006
+      - MONGODB_URI=mongodb://mongo-db:27017/maskandmaker
+      - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672
+      - POLYGON_AMOY_RPC=https://rpc-amoy.polygon.technology
+    depends_on:
+      - mongo-db
+      - rabbitmq
+    networks:
+      - mm-network
+
+  portal-service:
+    build:
+      context: ./portal-service
+      dockerfile: Dockerfile
+    container_name: mm-portal-svc
+    restart: unless-stopped
+    ports:
+      - "3007:3007"
+    environment:
+      - NODE_ENV=production
+      - PORT=3007
+      - MONGODB_URI=mongodb://mongo-db:27017/maskandmaker
+      - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672
+      - POLYGON_AMOY_RPC=https://rpc-amoy.polygon.technology
+    depends_on:
+      - mongo-db
+      - rabbitmq
+    networks:
+      - mm-network
+
+  identity-service:
+    build:
+      context: ./identity-service
+      dockerfile: Dockerfile
+    container_name: mm-identity-svc
+    restart: unless-stopped
+    ports:
+      - "3008:3008"
+    environment:
+      - NODE_ENV=production
+      - PORT=3008
+      - MONGODB_URI=mongodb://mongo-db:27017/maskandmaker
+      - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672
+      - JWT_SECRET=mm_heritage_jwt_super_secret_key_2026!
+    depends_on:
+      - mongo-db
+      - rabbitmq
+    networks:
+      - mm-network
+
+  media-service:
+    build:
+      context: ./media-service
+      dockerfile: Dockerfile
+    container_name: mm-media-svc
+    restart: unless-stopped
+    ports:
+      - "3009:3009"
+    environment:
+      - NODE_ENV=production
+      - PORT=3009
+      - MONGODB_URI=mongodb://mongo-db:27017/maskandmaker
+      - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_USE_SSL=false
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_BUCKET=maskandmaker-media
+      - PUBLIC_MEDIA_BASE_URL=http://localhost:3009/api/media/stream
+    depends_on:
+      - mongo-db
+      - rabbitmq
+      - minio
+    networks:
+      - mm-network
+
+  settlement-service:
+    build:
+      context: ./settlement-service
+      dockerfile: Dockerfile
+    container_name: mm-settlement-svc
+    restart: unless-stopped
+    ports:
+      - "3010:3010"
+    environment:
+      - NODE_ENV=production
+      - PORT=3010
+      - MONGODB_URI=mongodb://mongo-db:27017/maskandmaker
+      - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672
+      - POLYGON_AMOY_RPC=https://rpc-amoy.polygon.technology
+    depends_on:
+      - mongo-db
+      - rabbitmq
+    networks:
+      - mm-network
+
+  notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    container_name: mm-notification-svc
+    restart: unless-stopped
+    ports:
+      - "3011:3011"
+    environment:
+      - NODE_ENV=production
+      - PORT=3011
+      - MONGODB_URI=mongodb://mongo-db:27017/maskandmaker
+      - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      - mongo-db
+      - rabbitmq
+    networks:
+      - mm-network
+
+  # ==========================================
+  # API Gateway & Reverse Proxy
+  # ==========================================
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: mm-api-gateway
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - CATALOG_SVC_URL=http://catalog-service:3001
+      - ARTISAN_SVC_URL=http://artisan-service:3002
+      - CONTENT_SVC_URL=http://content-service:3003
+      - ORDER_SVC_URL=http://order-service:3004
+      - SEARCH_SVC_URL=http://search-service:3005
+      - VERIFY_SVC_URL=http://verify-service:3006
+      - PORTAL_SVC_URL=http://portal-service:3007
+      - IDENTITY_SVC_URL=http://identity-service:3008
+      - MEDIA_SVC_URL=http://media-service:3009
+      - SETTLEMENT_SVC_URL=http://settlement-service:3010
+      - NOTIFICATION_SVC_URL=http://notification-service:3011
+      - AI_3D_SVC_URL=http://host.docker.internal:8000
+    depends_on:
+      - catalog-service
+      - artisan-service
+      - content-service
+      - order-service
+      - search-service
+      - verify-service
+      - portal-service
+      - identity-service
+      - media-service
+      - settlement-service
+      - notification-service
+    networks:
+      - mm-network

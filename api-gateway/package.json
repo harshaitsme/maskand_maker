@@ -1,0 +1,35 @@
+{
+  "name": "api-gateway",
+  "version": "1.0.0",
+  "description": "Mask & Maker Unified API Gateway & Microservices Reverse Proxy with Health Aggregator",
+  "main": "dist/server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node ./node_modules/tsx/dist/cli.mjs watch src/server.ts",
+    "build": "node ./node_modules/typescript/bin/tsc",
+    "start": "node dist/server.js",
+    "typecheck": "node ./node_modules/typescript/bin/tsc --noEmit"
+  },
+  "keywords": [
+    "mask-and-maker",
+    "api-gateway",
+    "reverse-proxy",
+    "microservices",
+    "express"
+  ],
+  "author": "Mask & Maker Engineering",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "http-proxy-middleware": "^3.0.3"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.10.7",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}
