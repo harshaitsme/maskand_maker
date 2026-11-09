@@ -13,8 +13,9 @@ const upload = multer({
 export function createMediaRouter(controller: MediaController): Router {
   const router = Router();
 
-  // Upload endpoints
+  // Upload & AI Generation endpoints
   router.post("/upload", upload.single("file"), controller.uploadFile);
+  router.post("/generate-3d", upload.single("image"), controller.generate3DModel);
   router.post("/presigned-upload", controller.generatePresignedUpload);
   router.post("/register", controller.registerAsset);
 

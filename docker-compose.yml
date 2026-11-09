@@ -119,10 +119,10 @@ services:
     container_name: mm-order-svc
     restart: unless-stopped
     ports:
-      - "3004:3004"
+      - "3005:3005"
     environment:
       - NODE_ENV=production
-      - PORT=3004
+      - PORT=3005
       - MONGODB_URI=mongodb://mongo-db:27017/maskandmaker
       - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672
     depends_on:
@@ -138,10 +138,10 @@ services:
     container_name: mm-search-svc
     restart: unless-stopped
     ports:
-      - "3005:3005"
+      - "3006:3006"
     environment:
       - NODE_ENV=production
-      - PORT=3005
+      - PORT=3006
       - MONGODB_URI=mongodb://mongo-db:27017/maskandmaker
       - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672
     depends_on:
@@ -160,30 +160,10 @@ services:
     container_name: mm-verify-svc
     restart: unless-stopped
     ports:
-      - "3006:3006"
+      - "3004:3004"
     environment:
       - NODE_ENV=production
-      - PORT=3006
-      - MONGODB_URI=mongodb://mongo-db:27017/maskandmaker
-      - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672
-      - POLYGON_AMOY_RPC=https://rpc-amoy.polygon.technology
-    depends_on:
-      - mongo-db
-      - rabbitmq
-    networks:
-      - mm-network
-
-  portal-service:
-    build:
-      context: ./portal-service
-      dockerfile: Dockerfile
-    container_name: mm-portal-svc
-    restart: unless-stopped
-    ports:
-      - "3007:3007"
-    environment:
-      - NODE_ENV=production
-      - PORT=3007
+      - PORT=3004
       - MONGODB_URI=mongodb://mongo-db:27017/maskandmaker
       - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672
       - POLYGON_AMOY_RPC=https://rpc-amoy.polygon.technology
@@ -200,13 +180,33 @@ services:
     container_name: mm-identity-svc
     restart: unless-stopped
     ports:
+      - "3007:3007"
+    environment:
+      - NODE_ENV=production
+      - PORT=3007
+      - MONGODB_URI=mongodb://mongo-db:27017/maskandmaker
+      - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672
+      - JWT_SECRET=mm_heritage_jwt_super_secret_key_2026!
+    depends_on:
+      - mongo-db
+      - rabbitmq
+    networks:
+      - mm-network
+
+  portal-service:
+    build:
+      context: ./portal-service
+      dockerfile: Dockerfile
+    container_name: mm-portal-svc
+    restart: unless-stopped
+    ports:
       - "3008:3008"
     environment:
       - NODE_ENV=production
       - PORT=3008
       - MONGODB_URI=mongodb://mongo-db:27017/maskandmaker
       - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672
-      - JWT_SECRET=mm_heritage_jwt_super_secret_key_2026!
+      - POLYGON_AMOY_RPC=https://rpc-amoy.polygon.technology
     depends_on:
       - mongo-db
       - rabbitmq
@@ -233,10 +233,12 @@ services:
       - MINIO_SECRET_KEY=minioadmin
       - MINIO_BUCKET=maskandmaker-media
       - PUBLIC_MEDIA_BASE_URL=http://localhost:3009/api/media/stream
+      - AI_3D_SVC_URL=http://image-to-3d-service:8000
     depends_on:
       - mongo-db
       - rabbitmq
       - minio
+      - image-to-3d-service
     networks:
       - mm-network
 
@@ -280,6 +282,23 @@ services:
       - mm-network
 
   # ==========================================
+  # AI 3D Reconstruction Service (TripoSR)
+  # ==========================================
+  image-to-3d-service:
+    build:
+      context: ./3d-ai-service
+      dockerfile: Dockerfile
+    container_name: mm-3d-ai-svc
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - OMP_NUM_THREADS=4
+      - MKL_NUM_THREADS=4
+    networks:
+      - mm-network
+
+  # ==========================================
   # API Gateway & Reverse Proxy
   # ==========================================
   api-gateway:
@@ -296,26 +315,27 @@ services:
       - CATALOG_SVC_URL=http://catalog-service:3001
       - ARTISAN_SVC_URL=http://artisan-service:3002
       - CONTENT_SVC_URL=http://content-service:3003
-      - ORDER_SVC_URL=http://order-service:3004
-      - SEARCH_SVC_URL=http://search-service:3005
-      - VERIFY_SVC_URL=http://verify-service:3006
-      - PORTAL_SVC_URL=http://portal-service:3007
-      - IDENTITY_SVC_URL=http://identity-service:3008
+      - VERIFY_SVC_URL=http://verify-service:3004
+      - ORDER_SVC_URL=http://order-service:3005
+      - SEARCH_SVC_URL=http://search-service:3006
+      - IDENTITY_SVC_URL=http://identity-service:3007
+      - PORTAL_SVC_URL=http://portal-service:3008
       - MEDIA_SVC_URL=http://media-service:3009
       - SETTLEMENT_SVC_URL=http://settlement-service:3010
       - NOTIFICATION_SVC_URL=http://notification-service:3011
-      - AI_3D_SVC_URL=http://host.docker.internal:8000
+      - AI_3D_SVC_URL=http://image-to-3d-service:8000
     depends_on:
       - catalog-service
       - artisan-service
       - content-service
+      - verify-service
       - order-service
       - search-service
-      - verify-service
-      - portal-service
       - identity-service
+      - portal-service
       - media-service
       - settlement-service
       - notification-service
+      - image-to-3d-service
     networks:
       - mm-network

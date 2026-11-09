@@ -9,7 +9,7 @@ import {
   RegisterAssetSchema,
 } from "../views/media.dto.js";
 import { MediaView } from "../views/media.view.js";
-import { MediaUploadedEvent, publishMediaUploaded } from "../config/rabbitmq.js";
+import { MediaUploadedEvent, publishMediaUploaded, publish3DGenerated } from "../config/rabbitmq.js";
 import { MediaAssetType } from "../models/media.entity.js";
 
 export class MediaController {
@@ -298,6 +298,139 @@ export class MediaController {
     try {
       const stats = await this.mediaRepo.getStats();
       res.status(200).json(MediaView.formatStats(stats));
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  // 9. AI 3D Reconstruction Pipeline Link
+  generate3DModel = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      let imageBuffer: Buffer | null = null;
+      let filename = "image.jpg";
+      const maskSlug = req.body.maskSlug || `mask-${Date.now()}`;
+      const artisanSlug = req.body.artisanSlug || "chandana-bandara";
+      const mcResolution = Number(req.body.mc_resolution || 128);
+      const removeBg = req.body.remove_bg !== "false";
+
+      // 1. Get input image either from uploaded file or existing MinIO asset
+      if (req.file) {
+        imageBuffer = req.file.buffer;
+        filename = req.file.originalname;
+      } else if (req.body.photoKey) {
+        const dataStream = await minioClient.getObject(MINIO_BUCKET, req.body.photoKey);
+        const chunks: Buffer[] = [];
+        for await (const chunk of dataStream) {
+          chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+        }
+        imageBuffer = Buffer.concat(chunks);
+        filename = req.body.photoKey.split("/").pop() || "image.jpg";
+      }
+
+      if (!imageBuffer) {
+        res.status(400).json({
+          success: false,
+          error: "BadRequest",
+          message: "Please upload an image file or provide a valid 'photoKey' in request body",
+        });
+        return;
+      }
+
+      const aiUrl = process.env.AI_3D_SVC_URL || "http://localhost:8000";
+      console.log(`🧠 [media-service] Forwarding image to 3D AI service at ${aiUrl}/convert...`);
+
+      // 2. Prepare multipart request to 3D AI service
+      const formData = new FormData();
+      const blob = new Blob([imageBuffer], { type: "image/jpeg" });
+      formData.append("image", blob, filename);
+
+      const aiRes = await fetch(
+        `${aiUrl}/convert?mc_resolution=${mcResolution}&remove_bg=${removeBg}`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      if (!aiRes.ok) {
+        const errorText = await aiRes.text().catch(() => "Unknown AI error");
+        res.status(502).json({
+          success: false,
+          error: "BadGateway",
+          message: `3D AI service conversion failed: ${errorText}`,
+        });
+        return;
+      }
+
+      const glbArrayBuffer = await aiRes.arrayBuffer();
+      const glbBuffer = Buffer.from(glbArrayBuffer);
+      const glbSize = glbBuffer.length;
+      const key = `models/${maskSlug}.glb`;
+
+      // 3. Compute SHA256 of generated GLB
+      const sha256 = crypto.createHash("sha256").update(glbBuffer).digest("hex");
+
+      // 4. Store GLB model into MinIO S3
+      await minioClient.putObject(MINIO_BUCKET, key, glbBuffer, glbSize, {
+        "Content-Type": "model/gltf-binary",
+      });
+
+      // 5. Register in MongoDB
+      const baseUrl = process.env.PUBLIC_MEDIA_BASE_URL || "http://localhost:3009/api/media/stream";
+      const publicUrl = `${baseUrl}/${key}`;
+
+      const asset = await this.mediaRepo.create({
+        key,
+        bucket: MINIO_BUCKET,
+        originalName: `${maskSlug}.glb`,
+        mimeType: "model/gltf-binary",
+        sizeBytes: glbSize,
+        sha256,
+        assetType: "model-3d",
+        maskSlug,
+        artisanSlug,
+        publicUrl,
+        modelMetadata: {
+          triangleCount: 0,
+          format: "glb",
+          hasTextures: true,
+          dracoCompressed: false,
+        },
+        uploadedBy: "3d-ai-service",
+      });
+
+      // 6. Publish RabbitMQ event
+      await publish3DGenerated({
+        eventId: crypto.randomUUID(),
+        eventType: "media.3d_generated",
+        timestamp: new Date().toISOString(),
+        data: {
+          assetId: asset.id,
+          key,
+          bucket: MINIO_BUCKET,
+          sizeBytes: glbSize,
+          sha256,
+          maskSlug,
+          artisanSlug,
+          publicUrl,
+          modelFormat: "glb",
+        },
+      });
+
+      console.log(`✅ [media-service] 3D Model generated & stored in S3: ${key} (${glbSize} bytes)`);
+
+      res.status(201).json({
+        success: true,
+        message: "3D GLB model generated and stored in S3 successfully",
+        asset: MediaView.formatAsset(asset),
+        modelViewerProps: {
+          src: publicUrl,
+          alt: `${maskSlug} 3D Model`,
+          ar: true,
+          autoRotate: true,
+          cameraControls: true,
+        },
+      });
     } catch (error) {
       next(error);
     }

@@ -158,6 +158,19 @@ export class MaskRepository {
   }
 
   /**
+   * Enable AR viewing and link 3D model when AI reconstruction finishes
+   */
+  public async setArAvailable(slug: string, arAvailable = true): Promise<Mask | null> {
+    const updated = await MaskModel.findOneAndUpdate(
+      { slug },
+      { $set: { arAvailable } },
+      { new: true }
+    ).lean();
+
+    return updated ? (updated as unknown as Mask) : null;
+  }
+
+  /**
    * Total count of masks currently stored in the MongoDB collection
    */
   public async count(): Promise<number> {

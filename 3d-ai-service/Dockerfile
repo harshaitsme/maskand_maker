@@ -28,15 +28,18 @@ ENV PYTHONPATH=/app/TripoSR
 ENV OMP_NUM_THREADS=4
 ENV MKL_NUM_THREADS=4
 
-# 7. Pre-download model weights into container image so requests run instantly without internet delays
+# 7. Pre-download model weights into container image (with resilient fallback for CI environments)
 RUN python -c "\
-from tsr.system import TSR; \
-import rembg; \
-print('Pre-downloading rembg u2net model...'); \
-rembg.new_session(); \
-print('Pre-downloading TripoSR weights from HuggingFace...'); \
-TSR.from_pretrained('stabilityai/TripoSR', config_name='config.yaml', weight_name='model.ckpt'); \
-print('Model weights baked into image successfully!'); \
+try: \
+    import rembg; \
+    print('Pre-downloading rembg u2net model...'); \
+    rembg.new_session(); \
+    from tsr.system import TSR; \
+    print('Pre-downloading TripoSR weights from HuggingFace...'); \
+    TSR.from_pretrained('stabilityai/TripoSR', config_name='config.yaml', weight_name='model.ckpt'); \
+    print('Model weights baked into image successfully!'); \
+except Exception as e: \
+    print('Pre-downloading skipped during build (will download on startup):', e); \
 "
 
 # 8. Copy application code

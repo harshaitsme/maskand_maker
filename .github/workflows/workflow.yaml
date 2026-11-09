@@ -90,12 +90,28 @@ jobs:
         working-directory: ${{ matrix.service.path }}
         run: npm run build
 
+  test-python-service:
+    name: "Test & Validate: 3d-ai-service"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Validate Python Syntax
+        run: |
+          python -m py_compile 3d-ai-service/app.py
+
   # ==============================================================
   # Stage 2: Containerization & Push to Docker Hub
   # ==============================================================
   build-and-push:
     name: "Docker Build & Push: ${{ matrix.service.image }}"
-    needs: test-and-typecheck
+    needs: [test-and-typecheck, test-python-service]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -137,6 +153,9 @@ jobs:
           - name: api-gateway
             context: api-gateway
             image: maskandmaker-api-gateway
+          - name: 3d-ai-service
+            context: 3d-ai-service
+            image: maskandmaker-3d-ai-service
 
     steps:
       - name: Checkout Code
@@ -195,7 +214,7 @@ jobs:
   # ==============================================================
   ci-summary:
     name: "CI/CD Summary Report"
-    needs: [test-and-typecheck, build-and-push]
+    needs: [test-and-typecheck, test-python-service, build-and-push]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -205,8 +224,9 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Stage | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|---|---|" >> $GITHUB_STEP_SUMMARY
-          echo "| **Quality Gate (TypeCheck & Build)** | ${{ needs.test-and-typecheck.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Docker Hub Build & Push** | ${{ needs.build-and-push.result == 'success' && '✅ Succeeded' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Quality Gate (Node.js Services)** | ${{ needs.test-and-typecheck.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Quality Gate (Python 3D AI)** | ${{ needs.test-python-service.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Docker Hub Build & Push (13 Images)** | ${{ needs.build-and-push.result == 'success' && '✅ Succeeded' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📦 Microservices in Scope (${{ env.DOCKERHUB_USER }})" >> $GITHUB_STEP_SUMMARY
           echo "- \`${{ env.DOCKERHUB_USER }}/maskandmaker-catalog-service\`" >> $GITHUB_STEP_SUMMARY
@@ -221,3 +241,4 @@ jobs:
           echo "- \`${{ env.DOCKERHUB_USER }}/maskandmaker-settlement-service\`" >> $GITHUB_STEP_SUMMARY
           echo "- \`${{ env.DOCKERHUB_USER }}/maskandmaker-notification-service\`" >> $GITHUB_STEP_SUMMARY
           echo "- \`${{ env.DOCKERHUB_USER }}/maskandmaker-api-gateway\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ env.DOCKERHUB_USER }}/maskandmaker-3d-ai-service\`" >> $GITHUB_STEP_SUMMARY
