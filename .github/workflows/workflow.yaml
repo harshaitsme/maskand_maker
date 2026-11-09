@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - master
+      - default
       - develop
       - "feature/**"
     tags:
@@ -13,6 +14,7 @@ on:
     branches:
       - main
       - master
+      - default
   workflow_dispatch:
     inputs:
       push_to_registry:
@@ -148,6 +150,9 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             echo "should_push=false" >> $GITHUB_OUTPUT
+          elif [ "${{ secrets.DOCKERHUB_USERNAME }}" = "" ] || [ "${{ secrets.DOCKERHUB_TOKEN }}" = "" ]; then
+            echo "⚠️ DOCKERHUB_USERNAME or DOCKERHUB_TOKEN secret is not set. Docker image build will be tested without pushing."
+            echo "should_push=false" >> $GITHUB_OUTPUT
           elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "should_push=${{ github.event.inputs.push_to_registry }}" >> $GITHUB_OUTPUT
           else
@@ -167,7 +172,7 @@ jobs:
         with:
           images: ${{ env.DOCKERHUB_USER }}/${{ matrix.service.image }}
           tags: |
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/default' }}
             type=raw,value=${{ github.event.inputs.custom_tag }},enable=${{ github.event.inputs.custom_tag != '' }}
             type=ref,event=branch
             type=ref,event=pr
@@ -203,7 +208,7 @@ jobs:
           echo "| **Quality Gate (TypeCheck & Build)** | ${{ needs.test-and-typecheck.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| **Docker Hub Build & Push** | ${{ needs.build-and-push.result == 'success' && '✅ Succeeded' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📦 Published Microservices to Docker Hub (${{ env.DOCKERHUB_USER }})" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Microservices in Scope (${{ env.DOCKERHUB_USER }})" >> $GITHUB_STEP_SUMMARY
           echo "- \`${{ env.DOCKERHUB_USER }}/maskandmaker-catalog-service\`" >> $GITHUB_STEP_SUMMARY
           echo "- \`${{ env.DOCKERHUB_USER }}/maskandmaker-artisan-service\`" >> $GITHUB_STEP_SUMMARY
           echo "- \`${{ env.DOCKERHUB_USER }}/maskandmaker-content-service\`" >> $GITHUB_STEP_SUMMARY
