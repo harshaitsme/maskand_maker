@@ -4,6 +4,7 @@ import { maskRoutes } from "./routes/mask.routes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { maskRepository } from "./models/mask.repository.js";
 import { isDBConnected } from "./config/db.js";
+import { CatalogEventConsumer } from "./config/rabbitmq.js";
 
 export function createApp(): Application {
   const app = express();
@@ -28,6 +29,11 @@ export function createApp(): Application {
       status: dbConnected ? "UP" : "DEGRADED",
       service: "catalog-service",
       database: dbConnected ? "CONNECTED" : "DISCONNECTED",
+      eventBus: {
+        type: "RabbitMQ",
+        status: CatalogEventConsumer.isConnected() ? "CONNECTED" : "DISCONNECTED",
+        queue: "q.catalog.order-events",
+      },
       itemsInCollection: count,
       uptimeSeconds: Math.floor(process.uptime()),
       timestamp: new Date().toISOString(),

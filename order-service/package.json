@@ -1,0 +1,41 @@
+{
+  "name": "order-service",
+  "version": "1.0.0",
+  "description": "Mask & Maker Order Processing & Courier Tracking Microservice with RabbitMQ Event Bus (MVC + MongoDB)",
+  "main": "dist/server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node ./node_modules/tsx/dist/cli.mjs watch src/server.ts",
+    "seed": "node ./node_modules/tsx/dist/cli.mjs src/scripts/seed.ts",
+    "build": "node ./node_modules/typescript/bin/tsc",
+    "start": "node dist/server.js",
+    "typecheck": "node ./node_modules/typescript/bin/tsc --noEmit"
+  },
+  "keywords": [
+    "mask-and-maker",
+    "order-service",
+    "microservice",
+    "mvc",
+    "mongodb",
+    "rabbitmq",
+    "event-driven"
+  ],
+  "author": "Mask & Maker Engineering",
+  "license": "ISC",
+  "dependencies": {
+    "amqplib": "^0.10.5",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "mongoose": "^9.12.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/amqplib": "^0.10.6",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.10.7",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}
