@@ -242,7 +242,7 @@ services:
       - MINIO_ACCESS_KEY=minioadmin
       - MINIO_SECRET_KEY=minioadmin
       - MINIO_BUCKET=maskandmaker-media
-      - PUBLIC_MEDIA_BASE_URL=http://localhost:3009/api/media/stream
+      - PUBLIC_MEDIA_BASE_URL=/api/media/stream
       - AI_3D_SVC_URL=http://image-to-3d-service:8000
     depends_on:
       - mongo-db

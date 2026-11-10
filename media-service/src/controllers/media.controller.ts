@@ -57,7 +57,7 @@ export class MediaController {
       });
 
       // Save metadata in MongoDB
-      const baseUrl = process.env.PUBLIC_MEDIA_BASE_URL || "http://localhost:3009/api/media/stream";
+      const baseUrl = process.env.PUBLIC_MEDIA_BASE_URL || "/api/media/stream";
       const publicUrl = `${baseUrl}/${key}`;
 
       const asset = await this.mediaRepo.create({
@@ -376,7 +376,7 @@ export class MediaController {
       });
 
       // 5. Register in MongoDB
-      const baseUrl = process.env.PUBLIC_MEDIA_BASE_URL || "http://localhost:3009/api/media/stream";
+      const baseUrl = process.env.PUBLIC_MEDIA_BASE_URL || "/api/media/stream";
       const publicUrl = `${baseUrl}/${key}`;
 
       const asset = await this.mediaRepo.create({

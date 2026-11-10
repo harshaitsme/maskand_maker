@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { verifyRepository } from "../models/verify.repository.js";
 import { VerifyView } from "../views/verify.view.js";
 import { CertificateDoc } from "../models/verify.entity.js";
+import { VerifyEventConsumer } from "../config/rabbitmq.js";
 import {
   CertIdParamSchema,
   ClaimTwinBodySchema,
@@ -102,6 +103,14 @@ export class VerifyController {
       const { ownerName, ownerWallet } = ClaimTwinBodySchema.parse(req.body);
 
       const updated = await verifyRepository.claimDigitalTwin(certId, ownerName, ownerWallet);
+      await VerifyEventConsumer.publish("twin.claimed", {
+        certId: updated.certId,
+        maskSlug: updated.maskSlug,
+        artisanSlug: updated.artisanSlug,
+        ownerName: updated.owner,
+        ownerWallet: updated.ownerWallet,
+        claimedAt: new Date().toISOString(),
+      });
       res.status(200).json(VerifyView.renderClaimReceipt(updated));
     } catch (error: any) {
       if (error.message?.includes("already claimed")) {
