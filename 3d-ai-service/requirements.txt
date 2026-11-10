@@ -1,0 +1,31 @@
+# TripoSR 3D AI Service Dependencies
+fastapi>=0.100.0
+uvicorn>=0.22.0
+python-multipart>=0.0.6
+requests>=2.31.0
+pillow>=10.0.0
+numpy>=1.24.0
+pydantic>=2.0.0
+
+# Computer Vision & Background Removal
+rembg>=2.0.50
+onnxruntime>=1.16.0
+
+# 3D Mesh & Deep Learning
+trimesh>=4.0.0
+einops>=0.7.0
+omegaconf>=2.3.0
+transformers==4.35.0
+huggingface-hub<0.26.0
+typing-extensions>=4.8.0
+
+# PyTorch (CPU wheel recommended for CPU-only dev environments:
+# pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu)
+torch>=2.1.0
+torchvision>=0.16.0
+
+# Marching cubes extension:
+# pip install scikit-build-core pybind11
+# pip install --no-build-isolation git+https://github.com/tatsy/torchmcubes.git
+# TripoSR repo:
+# git clone https://github.com/VAST-AI-Research/TripoSR.git

@@ -24,6 +24,23 @@ export interface MediaUploadedEvent {
   };
 }
 
+export interface MediaGenerated3DEvent {
+  eventId: string;
+  eventType: "media.3d_generated";
+  timestamp: string;
+  data: {
+    assetId: string;
+    key: string;
+    bucket: string;
+    sizeBytes: number;
+    sha256: string;
+    maskSlug: string;
+    artisanSlug: string;
+    publicUrl: string;
+    modelFormat: string;
+  };
+}
+
 export async function connectRabbitMQ(): Promise<Channel | null> {
   try {
     console.log(`🐇 Connecting to RabbitMQ at ${RABBITMQ_URI}...`);
@@ -75,6 +92,29 @@ export async function publishMediaUploaded(event: MediaUploadedEvent): Promise<b
     return published;
   } catch (error) {
     console.error("Failed to publish media.uploaded event:", error);
+    return false;
+  }
+}
+
+export async function publish3DGenerated(event: MediaGenerated3DEvent): Promise<boolean> {
+  if (!channel) {
+    console.warn("RabbitMQ channel not open, skipping event publish:", event.eventType);
+    return false;
+  }
+
+  try {
+    const routingKey = "media.3d_generated";
+    const payload = Buffer.from(JSON.stringify(event));
+    const published = channel.publish(EXCHANGE_NAME, routingKey, payload, {
+      contentType: "application/json",
+      persistent: true,
+      timestamp: Date.now(),
+      messageId: event.eventId,
+    });
+    console.log(`📢 Emitted RabbitMQ event '${event.eventType}' [routingKey=${routingKey}, key=${event.data.key}]`);
+    return published;
+  } catch (error) {
+    console.error("Failed to publish media.3d_generated event:", error);
     return false;
   }
 }

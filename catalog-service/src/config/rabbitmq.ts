@@ -38,10 +38,11 @@ export class CatalogEventConsumer {
       // 2. Assert durable consumer queue
       await ch.assertQueue(this.queue, { durable: true });
 
-      // 3. Bind to order creation events
+      // 3. Bind to order creation & 3D media generated events
       await ch.bindQueue(this.queue, this.exchange, "order.created");
+      await ch.bindQueue(this.queue, this.exchange, "media.3d_generated");
 
-      console.log(`✅ [Catalog] RabbitMQ consumer listening on queue '${this.queue}' bound to 'order.created'`);
+      console.log(`✅ [Catalog] RabbitMQ consumer listening on queue '${this.queue}' bound to 'order.created' and 'media.3d_generated'`);
 
       // 4. Consume messages
       await ch.consume(
@@ -53,7 +54,7 @@ export class CatalogEventConsumer {
             const content = JSON.parse(msg.content.toString());
             const routingKey = msg.fields.routingKey;
 
-            console.log(`📥 [Catalog] Received event '${routingKey}' for Order ${content.orderId}`);
+            console.log(`📥 [Catalog] Received event '${routingKey}'`);
 
             if (routingKey === "order.created" && Array.isArray(content.items)) {
               for (const item of content.items) {
@@ -64,6 +65,14 @@ export class CatalogEventConsumer {
                   } else {
                     console.warn(`⚠️ [Catalog] Mask '${item.slug}' stock could not be decremented (out of stock or not found)`);
                   }
+                }
+              }
+            } else if (routingKey === "media.3d_generated") {
+              const maskSlug = content.data?.maskSlug || content.maskSlug;
+              if (maskSlug) {
+                const updated = await maskRepository.setArAvailable(maskSlug, true);
+                if (updated) {
+                  console.log(`🥽 [Catalog] Mask '${maskSlug}' updated with arAvailable=true from 3D AI service!`);
                 }
               }
             }

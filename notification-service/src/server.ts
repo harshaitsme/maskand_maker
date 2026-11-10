@@ -36,6 +36,7 @@ async function bootstrap() {
           "settlement.recorded",
           "payout.processed",
           "nfc.tamper_reported",
+          "media.3d_generated",
         ],
         async (routingKey, payload) => {
           await NotificationController.handleEvent(routingKey, payload);

@@ -35,7 +35,18 @@ const UserSchema = new Schema<UserMongooseDoc>(
     },
     passwordHash: {
       type: String,
-      required: true,
+      default: "",
+    },
+    authProvider: {
+      type: String,
+      enum: ["local", "google", "preview"],
+      default: "local",
+      index: true,
+    },
+    googleId: {
+      type: String,
+      sparse: true,
+      default: null,
     },
     role: {
       type: String,
