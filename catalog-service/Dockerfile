@@ -3,30 +3,30 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Copy dependency manifests
-COPY package*.json tsconfig.json ./
+# Copy only dependency manifests first to leverage Docker cache
+COPY package*.json ./
 
 # Install all dependencies (including devDependencies for build)
 RUN npm ci
 
-# Copy source code
+# Copy configuration and source code
+COPY tsconfig.json ./
 COPY src/ ./src/
 
-# Compile TypeScript to JavaScript in /dist
+# Compile TypeScript to JavaScript
 RUN npm run build
 
 # Stage 2: Production Runtime
 FROM node:22-alpine AS runner
+
+# Install tini to properly handle signals as PID 1
+RUN apk add --no-cache tini
 
 WORKDIR /app
 
 # Production Environment Settings
 ENV NODE_ENV=production
 ENV PORT=3001
-ENV MONGODB_URI=mongodb://host.docker.internal:27017/maskandmaker
-ENV MONGODB_COLLECTION=catalog-svc
-ENV RABBITMQ_URI=amqp://guest:guest@host.docker.internal:5672
-ENV RABBITMQ_EXCHANGE=maskandmaker.events
 
 # Copy package manifests and install production-only dependencies
 COPY package*.json ./
@@ -34,6 +34,9 @@ RUN npm ci --only=production && npm cache clean --force
 
 # Copy compiled JavaScript from builder stage
 COPY --from=builder /app/dist ./dist
+
+# Ensure the node user owns the application directory
+RUN chown -R node:node /app
 
 # Run as non-root user for security
 USER node
@@ -44,5 +47,6 @@ EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3001/health || exit 1
 
-# Start the catalog microservice
+# Use tini to start the catalog microservice
+ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["node", "dist/server.js"]
