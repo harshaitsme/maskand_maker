@@ -192,7 +192,7 @@ jobs:
         with:
           images: ${{ env.DOCKERHUB_USER }}/${{ matrix.service.image }}
           tags: |
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/default' }}
+            type=raw,value=latest,enable=${{ github.event_name != 'pull_request' }}
             type=raw,value=${{ github.event.inputs.custom_tag }},enable=${{ github.event.inputs.custom_tag != '' }}
             type=ref,event=branch
             type=ref,event=pr
