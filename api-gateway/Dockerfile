@@ -3,38 +3,30 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Copy dependency manifests
-COPY package*.json tsconfig.json ./
+# Copy only dependency manifests first to leverage Docker cache
+COPY package*.json ./
 
-# Install all dependencies
+# Install all dependencies (including devDependencies for building)
 RUN npm ci
 
-# Copy source code
+# Copy configuration and source code
+COPY tsconfig.json ./
 COPY src/ ./src/
 
-# Compile TypeScript to JavaScript in /dist
+# Compile TypeScript to JavaScript
 RUN npm run build
 
 # Stage 2: Production Runtime
 FROM node:22-alpine AS runner
+
+# Install tini to properly handle signals as PID 1
+RUN apk add --no-cache tini
 
 WORKDIR /app
 
 # Production Environment Settings
 ENV NODE_ENV=production
 ENV PORT=5000
-ENV CATALOG_SVC_URL=http://catalog-service:3001
-ENV ARTISAN_SVC_URL=http://artisan-service:3002
-ENV CONTENT_SVC_URL=http://content-service:3003
-ENV ORDER_SVC_URL=http://order-service:3004
-ENV SEARCH_SVC_URL=http://search-service:3005
-ENV VERIFY_SVC_URL=http://verify-service:3006
-ENV PORTAL_SVC_URL=http://portal-service:3007
-ENV IDENTITY_SVC_URL=http://identity-service:3008
-ENV MEDIA_SVC_URL=http://media-service:3009
-ENV SETTLEMENT_SVC_URL=http://settlement-service:3010
-ENV NOTIFICATION_SVC_URL=http://notification-service:3011
-ENV AI_3D_SVC_URL=http://image-to-3d-service:8000
 
 # Copy package manifests and install production-only dependencies
 COPY package*.json ./
@@ -42,6 +34,9 @@ RUN npm ci --only=production && npm cache clean --force
 
 # Copy compiled JavaScript from builder stage
 COPY --from=builder /app/dist ./dist
+
+# Ensure the node user owns the application directory
+RUN chown -R node:node /app
 
 # Run as non-root user for security
 USER node
@@ -52,5 +47,6 @@ EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:5000/health || exit 1
 
-# Start the API gateway
+# Use tini to start the API gateway
+ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["node", "dist/server.js"]
