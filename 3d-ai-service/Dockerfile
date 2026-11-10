@@ -1,34 +1,51 @@
-FROM python:3.10-slim
+# --- Stage 1: Builder ---
+FROM python:3.10-slim AS builder
 
 WORKDIR /app
 
-# 1. Install system build tools (cmake is required to compile torchmcubes)
+# Install system build tools required for torchmcubes and other packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git build-essential cmake curl libgl1 libglib2.0-0 \
+    git build-essential cmake libgl1 libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. Install PyTorch CPU
+# Install PyTorch CPU and build dependencies
 RUN pip install --no-cache-dir --index-url https://pypi.org/simple typing-extensions
 RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
-
-# 3. Install build dependencies and compile torchmcubes
 RUN pip install --no-cache-dir scikit-build-core pybind11
+
+# Compile and install torchmcubes
 RUN pip install --no-cache-dir --no-build-isolation git+https://github.com/tatsy/torchmcubes.git
 
-# 4. Clone TripoSR repo directly (it provides the 'tsr' module)
+# Clone TripoSR repo
 RUN git clone https://github.com/VAST-AI-Research/TripoSR.git /app/TripoSR
 
-# 5. Install TripoSR dependencies and web server libraries
+# Install TripoSR dependencies and web server libraries
 RUN pip install --no-cache-dir \
     omegaconf einops "transformers==4.35.0" "huggingface-hub<0.26.0" trimesh rembg \
     fastapi uvicorn requests pillow pydantic python-multipart onnxruntime
 
-# 6. Add TripoSR to Python path & optimize CPU thread execution
+# --- Stage 2: Final Runtime ---
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Install runtime system dependencies (including curl for the healthcheck)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgl1 libglib2.0-0 curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy installed packages and application from builder
+COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+COPY --from=builder /app/TripoSR /app/TripoSR
+
+# Set environment variables
 ENV PYTHONPATH=/app/TripoSR
 ENV OMP_NUM_THREADS=4
 ENV MKL_NUM_THREADS=4
+ENV PYTHONUNBUFFERED=1
 
-# 7. Pre-download model weights into container image so requests run instantly without internet delays
+# Pre-download model weights
 RUN python -c "\
 from tsr.system import TSR; \
 import rembg; \
@@ -39,7 +56,11 @@ TSR.from_pretrained('stabilityai/TripoSR', config_name='config.yaml', weight_nam
 print('Model weights baked into image successfully!'); \
 "
 
-# 8. Copy application code
+# Create a non-root user and switch to it
+RUN useradd -m appuser
+USER appuser
+
+# Copy application code
 COPY app.py ./
 
 EXPOSE 8000
