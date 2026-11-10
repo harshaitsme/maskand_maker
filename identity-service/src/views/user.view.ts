@@ -8,6 +8,8 @@ export interface UserPresenter {
   role: string;
   initials: string;
   avatarUrl?: string;
+  picture?: string;
+  provider?: "google" | "preview" | "local";
   location?: string;
   artisanSlug?: string;
   wishlist: string[];
@@ -35,6 +37,8 @@ export class UserView {
       role: raw.role,
       initials: raw.initials,
       avatarUrl: raw.avatarUrl || "",
+      picture: raw.avatarUrl || "",
+      provider: raw.authProvider || "local",
       location: raw.location || "",
       artisanSlug: raw.artisanSlug || undefined,
       wishlist: raw.wishlist || [],

@@ -63,9 +63,22 @@ export class OrderController {
       const orderId = await orderRepository.generateNextOrderId();
       const today = new Date().toISOString().split("T")[0];
 
+      // Calculate shipping cost based on destination and weight if not provided
+      const totalWeight = input.items.reduce((sum, item) => sum + (item.weightKg || 1.5) * item.qty, 0);
+      let shippingCost = input.shippingCostLKR;
+      if (shippingCost === undefined) {
+        if (input.shippingAddress.country === "Sri Lanka") {
+          shippingCost = 2800;
+        } else if (input.carrier === "FedEx Priority") {
+          shippingCost = Math.round(13200 + totalWeight * 3900);
+        } else {
+          shippingCost = Math.round(14500 + totalWeight * 4200);
+        }
+      }
+
       // Calculate items total
       const itemsTotal = input.items.reduce((sum, item) => sum + item.priceLKR * item.qty, 0);
-      const grandTotal = itemsTotal + input.shippingCostLKR;
+      const grandTotal = itemsTotal + shippingCost;
 
       // Initial tracking events
       const events: OrderEvent[] = [
@@ -76,10 +89,12 @@ export class OrderController {
         { label: "Delivered", date: "—", done: false },
       ];
 
-      const trackingNumber =
-        input.carrier === "Island Express"
-          ? `ISL-${Math.floor(10000 + Math.random() * 90000)}-LK`
-          : `DHL-${Math.floor(1000000000 + Math.random() * 9000000000)}`;
+      let trackingNumber = `DHL-${Math.floor(1000000000 + Math.random() * 9000000000)}`;
+      if (input.carrier === "Island Express") {
+        trackingNumber = `ISL-${Math.floor(10000 + Math.random() * 90000)}-LK`;
+      } else if (input.carrier === "FedEx Priority") {
+        trackingNumber = `FDX-${Math.floor(1000000000 + Math.random() * 9000000000)}`;
+      }
 
       const newOrderData: Partial<OrderDoc> = {
         id: orderId,
@@ -87,7 +102,7 @@ export class OrderController {
         status: "preparing",
         items: input.items,
         totalLKR: grandTotal,
-        shippingLKR: input.shippingCostLKR,
+        shippingLKR: shippingCost,
         events,
         shippingAddress: input.shippingAddress,
         courier: {
