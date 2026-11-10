@@ -5,7 +5,7 @@ import { ZodError } from "zod";
  * Centralized Error Handler Middleware for artisan-service
  */
 export function errorHandler(
-  err: any,
+  err: unknown,
   _req: Request,
   res: Response,
   _next: NextFunction
@@ -23,17 +23,22 @@ export function errorHandler(
     return;
   }
 
-  // Handle Domain / Server Errors
-  const status = err.statusCode || err.status || 500;
-  const message = err.message || "Internal Server Error";
+  // Safely extract error properties
+  const errorObj = err instanceof Error ? err : new Error(String(err));
+  const status = (errorObj as any).statusCode || (errorObj as any).status || 500;
+  const message = errorObj.message || "Internal Server Error";
 
-  console.error(`[Error] ${err.name || "Exception"}: ${message}`);
+  // Log the error
+  console.error(`[Error] ${errorObj.name || "Exception"}: ${message}`);
   if (status === 500 && process.env.NODE_ENV !== "production") {
-    console.error(err.stack);
+    console.error(errorObj.stack);
   }
 
+  // Respond to the client
   res.status(status).json({
-    error: err.name || "ServerError",
-    message,
+    error: errorObj.name || "ServerError",
+    message: status === 500 && process.env.NODE_ENV === "production" 
+      ? "Internal Server Error" 
+      : message,
   });
 }
