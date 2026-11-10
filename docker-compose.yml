@@ -39,6 +39,7 @@ services:
   minio:
     image: minio/minio:latest
     container_name: mm-minio
+    user: "0:0"
     restart: unless-stopped
     command: server /data --console-address ":9001"
     ports:
@@ -56,6 +57,7 @@ services:
   # Core Business Microservices
   # ==========================================
   catalog-service:
+    image: mask-and-maker-catalog-service:latest
     build:
       context: ./catalog-service
       dockerfile: Dockerfile
@@ -75,6 +77,7 @@ services:
       - mm-network
 
   artisan-service:
+    image: mask-and-maker-artisan-service:latest
     build:
       context: ./artisan-service
       dockerfile: Dockerfile
@@ -94,6 +97,7 @@ services:
       - mm-network
 
   content-service:
+    image: mask-and-maker-content-service:latest
     build:
       context: ./content-service
       dockerfile: Dockerfile
@@ -113,6 +117,7 @@ services:
       - mm-network
 
   order-service:
+    image: mask-and-maker-order-service:latest
     build:
       context: ./order-service
       dockerfile: Dockerfile
@@ -132,6 +137,7 @@ services:
       - mm-network
 
   search-service:
+    image: mask-and-maker-search-service:latest
     build:
       context: ./search-service
       dockerfile: Dockerfile
@@ -154,6 +160,7 @@ services:
   # Web3, Verification & Portal Microservices
   # ==========================================
   verify-service:
+    image: mask-and-maker-verify-service:latest
     build:
       context: ./verify-service
       dockerfile: Dockerfile
@@ -174,6 +181,7 @@ services:
       - mm-network
 
   identity-service:
+    image: mask-and-maker-identity-service:latest
     build:
       context: ./identity-service
       dockerfile: Dockerfile
@@ -194,6 +202,7 @@ services:
       - mm-network
 
   portal-service:
+    image: mask-and-maker-portal-service:latest
     build:
       context: ./portal-service
       dockerfile: Dockerfile
@@ -214,6 +223,7 @@ services:
       - mm-network
 
   media-service:
+    image: mask-and-maker-media-service:latest
     build:
       context: ./media-service
       dockerfile: Dockerfile
@@ -243,6 +253,7 @@ services:
       - mm-network
 
   settlement-service:
+    image: mask-and-maker-settlement-service:latest
     build:
       context: ./settlement-service
       dockerfile: Dockerfile
@@ -263,6 +274,7 @@ services:
       - mm-network
 
   notification-service:
+    image: mask-and-maker-notification-service:latest
     build:
       context: ./notification-service
       dockerfile: Dockerfile
@@ -285,6 +297,7 @@ services:
   # AI 3D Reconstruction Service (TripoSR)
   # ==========================================
   image-to-3d-service:
+    image: image_to_glb:1.0v
     build:
       context: ./3d-ai-service
       dockerfile: Dockerfile
@@ -302,6 +315,7 @@ services:
   # API Gateway & Reverse Proxy
   # ==========================================
   api-gateway:
+    image: mask-and-maker-api-gateway:latest
     build:
       context: ./api-gateway
       dockerfile: Dockerfile
