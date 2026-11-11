@@ -310,7 +310,7 @@ export class MediaController {
       let filename = "image.jpg";
       const maskSlug = req.body.maskSlug || `mask-${Date.now()}`;
       const artisanSlug = req.body.artisanSlug || "chandana-bandara";
-      const mcResolution = Number(req.body.mc_resolution || 256);
+      const mcResolution = Number(req.body.mc_resolution || 192);
       const removeBg = req.body.remove_bg !== "false";
 
       // 1. Get input image either from uploaded file or existing MinIO asset

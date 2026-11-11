@@ -134,6 +134,8 @@ export function createApp(): Express {
       target: services.media.url,
       changeOrigin: true,
       pathFilter: "/api/media",
+      proxyTimeout: 300000,
+      timeout: 300000,
     })
   );
 
@@ -162,6 +164,8 @@ export function createApp(): Express {
       changeOrigin: true,
       pathFilter: "/api/ai-3d",
       pathRewrite: { "^/api/ai-3d": "/convert" },
+      proxyTimeout: 300000,
+      timeout: 300000,
     })
   );
 
