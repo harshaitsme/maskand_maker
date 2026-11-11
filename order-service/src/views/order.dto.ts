@@ -71,6 +71,8 @@ export type UpdateOrderStatusInput = z.infer<typeof UpdateOrderStatusSchema>;
 
 export const OrderQuerySchema = z.object({
   status: z.enum(["preparing", "in-transit", "delivered"]).optional(),
+  email: z.string().optional(),
+  customerEmail: z.string().optional(),
   limit: z.coerce.number().int().positive().max(100).default(50),
   skip: z.coerce.number().int().nonnegative().default(0),
 });
