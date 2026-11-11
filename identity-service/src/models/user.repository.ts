@@ -116,6 +116,27 @@ export class UserRepository {
     };
   }
 
+  async updateRole(id: string, role: UserDoc["role"]): Promise<UserMongooseDoc | null> {
+    return await UserModel.findByIdAndUpdate(
+      id,
+      { $set: { role } },
+      { new: true, runValidators: true }
+    ).exec();
+  }
+
+  async syncAdminUsers(): Promise<void> {
+    const adminSeeds = SEED_USERS.filter((u) => u.role === "admin");
+    for (const adminUser of adminSeeds) {
+      const email = adminUser.email.toLowerCase().trim();
+      const existing = await UserModel.findOne({ email }).exec();
+      if (!existing) {
+        await UserModel.create(adminUser);
+      } else if (existing.role !== "admin") {
+        await UserModel.findByIdAndUpdate(existing._id, { $set: { role: "admin" } }).exec();
+      }
+    }
+  }
+
   async seedInitialData(force = false): Promise<{ count: number }> {
     const count = await UserModel.countDocuments();
     if (count > 0 && !force) {
