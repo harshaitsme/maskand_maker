@@ -5,6 +5,7 @@ import { UserRepository } from "../models/user.repository.js";
 import {
   RegisterUserSchema,
   LoginUserSchema,
+  GoogleAuthSchema,
   UpdateProfileSchema,
   AddAddressSchema,
   UpdateAddressSchema,
@@ -81,6 +82,15 @@ export class UserController {
         return;
       }
 
+      if (!user.passwordHash) {
+        res.status(401).json({
+          success: false,
+          error: "Unauthorized",
+          message: "This account was created with Google sign-in. Please sign in with Google.",
+        });
+        return;
+      }
+
       const isMatch = await bcrypt.compare(parsed.password, user.passwordHash);
       if (!isMatch) {
         res.status(401).json({
@@ -89,6 +99,56 @@ export class UserController {
           message: "Invalid email or password.",
         });
         return;
+      }
+
+      const token = generateToken({
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+      });
+
+      res.status(200).json(UserView.formatAuthResponse(user, token));
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  googleLogin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const parsed = GoogleAuthSchema.parse(req.body);
+      const email = parsed.email.toLowerCase().trim();
+      const googleId = parsed.id || parsed.googleId || "";
+      const avatarUrl = parsed.picture || parsed.avatarUrl || "";
+
+      let user = await this.userRepo.findByEmail(email);
+
+      if (!user) {
+        // Auto-provision user with role 'buyer'
+        const initials = this.extractInitials(parsed.name);
+        const randomPassword = crypto.randomBytes(32).toString("hex");
+        const passwordHash = await bcrypt.hash(randomPassword, 10);
+
+        user = await this.userRepo.create({
+          name: parsed.name,
+          email,
+          passwordHash,
+          role: "buyer",
+          initials,
+          avatarUrl,
+          authProvider: parsed.provider || "google",
+          googleId,
+          location: "Sri Lanka",
+          wishlist: [],
+          addresses: [],
+          claimedCertIds: [],
+          isActive: true,
+        });
+      } else {
+        // Update avatar and authProvider if not set
+        if (avatarUrl && !user.avatarUrl) {
+          await this.userRepo.updateProfile(user.id, { avatarUrl });
+          user.avatarUrl = avatarUrl;
+        }
       }
 
       const token = generateToken({

@@ -66,12 +66,12 @@ export function createApp(): Express {
     })
   );
 
-  // 3. Content Service (/api/traditions, /api/articles, /api/content)
+  // 3. Content Service (/api/traditions, /api/articles, /api/content, /api/stages, /api/workshops)
   app.use(
     createProxyMiddleware({
       target: services.content.url,
       changeOrigin: true,
-      pathFilter: ["/api/traditions", "/api/articles", "/api/content"],
+      pathFilter: ["/api/traditions", "/api/articles", "/api/content", "/api/stages", "/api/workshops"],
     })
   );
 

@@ -72,4 +72,10 @@ export const services: Record<string, ServiceConfig> = {
     prefix: "/api/notifications",
     healthUrl: `${process.env.NOTIFICATION_SVC_URL || "http://localhost:3011"}/health`,
   },
+  ai3d: {
+    name: "3d-ai-service",
+    url: process.env.AI_3D_SVC_URL || "http://localhost:8000",
+    prefix: "/api/ai-3d",
+    healthUrl: `${process.env.AI_3D_SVC_URL || "http://localhost:8000"}/health`,
+  },
 };

@@ -215,6 +215,26 @@ export class NotificationController {
           break;
         }
 
+        case "media.3d_generated": {
+          const d = payload.data || payload;
+          const maskSlug = d.maskSlug || "traditional-mask";
+          const artisanSlug = d.artisanSlug || "chandana-bandara";
+          const publicUrl = d.publicUrl || `/api/media/stream/${d.key || ""}`;
+
+          await repo.create({
+            recipientId: artisanSlug,
+            recipientRole: "artisan",
+            channel: "in_app",
+            category: "verification",
+            priority: "medium",
+            title: `3D Model Ready: ${maskSlug}`,
+            message: `AI 3D photogrammetry mesh has been reconstructed and published (${d.sizeBytes ? `${Math.round(d.sizeBytes / 1024)} KB` : "GLB"}). Ready for AR view!`,
+            data: { maskSlug, key: d.key, publicUrl, modelFormat: d.modelFormat || "glb" },
+            link: publicUrl,
+          });
+          break;
+        }
+
         default:
           console.log(`ℹ️ [notification-service] Unhandled event routing key: '${routingKey}'`);
       }

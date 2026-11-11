@@ -4,6 +4,14 @@ import { SEED_MEDIA_ASSETS } from "./seed.data.js";
 
 export class MediaRepository {
   async create(assetData: Partial<MediaAssetDoc>): Promise<MediaAssetMongooseDoc> {
+    if (assetData.key) {
+      const updated = await MediaAssetModel.findOneAndUpdate(
+        { key: assetData.key },
+        { $set: assetData },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      ).exec();
+      if (updated) return updated;
+    }
     const asset = new MediaAssetModel(assetData);
     return await asset.save();
   }

@@ -8,7 +8,7 @@ export const CreateNotificationSchema = z.object({
   priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
   title: z.string().min(1, "title is required"),
   message: z.string().min(1, "message is required"),
-  data: z.record(z.any()).optional(),
+  data: z.record(z.string(), z.any()).optional(),
   link: z.string().optional(),
 });
 

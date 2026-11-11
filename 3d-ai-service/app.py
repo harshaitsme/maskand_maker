@@ -7,12 +7,14 @@ from contextlib import contextmanager
 import numpy as np
 import rembg
 import torch
+import trimesh
+import trimesh.smoothing
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.responses import Response
 from PIL import Image, UnidentifiedImageError
 
 from tsr.system import TSR
-from tsr.utils import remove_background, resize_foreground
+from tsr.utils import remove_background, resize_foreground, to_gradio_3d_orientation
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -112,11 +114,13 @@ def convert_image(
     remove_bg: bool = Query(True, description="Remove background automatically before 3D reconstruction"),
     foreground_ratio: float = Query(0.85, ge=0.5, le=1.0),
     mc_resolution: int = Query(
-        128 if DEVICE == "cpu" else 256,
-        ge=32,
+        256,
+        ge=64,
         le=320,
-        description="Marching Cubes resolution (128 for CPU ~20s, 256 for GPU)",
+        description="Marching Cubes resolution (256 default for high fidelity, 128 for fast draft)",
     ),
+    smooth_mesh: bool = Query(True, description="Apply Laplacian smoothing to eliminate voxel faceting"),
+    orientation_fix: bool = Query(True, description="Rotate mesh to upright glTF viewing orientation"),
 ):
     if image.content_type is not None and not image.content_type.startswith("image/"):
         raise HTTPException(status_code=415, detail="Uploaded file must be an image")
@@ -128,7 +132,12 @@ def convert_image(
         raise HTTPException(status_code=400, detail="The uploaded file is not a valid image") from exc
 
     try:
-        logger.info("Starting 3D reconstruction (resolution=%d, remove_bg=%s)...", mc_resolution, remove_bg)
+        logger.info(
+            "Starting high-fidelity 3D reconstruction (resolution=%d, remove_bg=%s, smooth=%s)...",
+            mc_resolution,
+            remove_bg,
+            smooth_mesh,
+        )
         processed_image = (
             _prepare_image(input_image, foreground_ratio)
             if remove_bg
@@ -143,6 +152,21 @@ def convert_image(
                 has_vertex_color=True,
                 resolution=mc_resolution,
             )[0]
+
+        # 1. Correct orientation to standard upright glTF coordinate space
+        if orientation_fix:
+            mesh = to_gradio_3d_orientation(mesh)
+
+        # 2. Smooth out Marching Cubes voxel stepping for realistic wood carving finish
+        if smooth_mesh:
+            logger.info("Applying Laplacian smoothing and normal recalculation...")
+            trimesh.smoothing.filter_laplacian(mesh, lamb=0.5, iterations=3)
+
+        # 3. Recalculate smooth vertex normals so WebGL renders smooth lighting
+        mesh.fix_normals()
+
+        # 4. Center model at origin for smooth rotation
+        mesh.vertices -= mesh.bounding_box.centroid
 
         output = io.BytesIO()
         mesh.export(output, file_type="glb")

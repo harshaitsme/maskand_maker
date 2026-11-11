@@ -24,7 +24,8 @@ $services = @(
   @{ Local = "mask-and-maker-media-service:latest"; Remote = "maskandmaker-media-service" },
   @{ Local = "mask-and-maker-settlement-service:latest"; Remote = "maskandmaker-settlement-service" },
   @{ Local = "mask-and-maker-notification-service:latest"; Remote = "maskandmaker-notification-service" },
-  @{ Local = "mask-and-maker-api-gateway:latest"; Remote = "maskandmaker-api-gateway" }
+  @{ Local = "mask-and-maker-api-gateway:latest"; Remote = "maskandmaker-api-gateway" },
+  @{ Local = "image_to_glb:1.0v"; Remote = "maskandmaker-3d-ai-service" }
 )
 
 foreach ($s in $services) {

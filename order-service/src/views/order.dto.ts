@@ -14,24 +14,50 @@ export const OrderItemInputSchema = z.object({
   name: z.string().optional(),
   qty: z.number().int().positive().default(1),
   priceLKR: z.number().positive(),
+  weightKg: z.number().optional().default(1.5),
 });
 
-export const ShippingAddressInputSchema = z.object({
-  fullName: z.string().min(2, "Full name is required"),
-  addressLine: z.string().min(3, "Address is required"),
-  city: z.string().min(2, "City is required"),
-  postalCode: z.string().optional(),
-  country: z.string().default("Sri Lanka"),
-  phone: z.string().optional(),
-  email: z.string().email("Valid email required").optional(),
-});
+export const ShippingAddressInputSchema = z
+  .object({
+    fullName: z.string().optional(),
+    name: z.string().optional(),
+    addressLine: z.string().optional(),
+    line1: z.string().optional(),
+    city: z.string().min(2, "City is required"),
+    postalCode: z.string().optional(),
+    postal: z.string().optional(),
+    country: z.string().default("Sri Lanka"),
+    phone: z.string().optional(),
+    email: z.string().email("Valid email required").optional(),
+  })
+  .transform((val) => ({
+    fullName: val.fullName || val.name || "Customer",
+    addressLine: val.addressLine || val.line1 || "",
+    city: val.city,
+    postalCode: val.postalCode || val.postal || "",
+    country: val.country,
+    phone: val.phone || "",
+    email: val.email || "",
+  }));
+
+export const CarrierSchema = z
+  .string()
+  .optional()
+  .default("DHL Express")
+  .transform((val) => {
+    const lower = (val || "").toLowerCase();
+    if (lower.includes("island")) return "Island Express" as const;
+    if (lower.includes("fedex")) return "FedEx Priority" as const;
+    return "DHL Express" as const;
+  });
 
 export const CreateOrderSchema = z.object({
   items: z.array(OrderItemInputSchema).min(1, "At least one mask item is required to place an order"),
   shippingAddress: ShippingAddressInputSchema,
-  carrier: z.enum(["Island Express", "DHL Express", "FedEx Priority"]).default("DHL Express"),
-  shippingCostLKR: z.number().nonnegative().default(4500),
-  paymentMethod: z.enum(["card", "crypto", "cod"]).default("card"),
+  carrier: CarrierSchema,
+  shippingCostLKR: z.number().nonnegative().optional(),
+  paymentMethod: z.enum(["card", "crypto", "cod", "demo"]).optional().default("card"),
+  userId: z.string().optional(),
 });
 
 export type CreateOrderInput = z.infer<typeof CreateOrderSchema>;

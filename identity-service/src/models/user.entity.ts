@@ -16,10 +16,12 @@ export interface UserDoc {
   id: string; // User ID (e.g. "USR-001" or ObjectId hex)
   name: string; // e.g. "Ruwin Jayasuriya"
   email: string; // e.g. "r.jayasuriya@holding.lk"
-  passwordHash: string;
+  passwordHash?: string;
   role: UserRole; // "buyer" | "artisan" | "verifier" | "admin"
   initials: string; // e.g. "RJ"
   avatarUrl?: string;
+  authProvider?: "local" | "google" | "preview";
+  googleId?: string;
   location?: string; // e.g. "Colombo 07, Sri Lanka"
   artisanSlug?: string; // e.g. "chandana-bandara" (for artisan role)
   wishlist: string[]; // mask slugs e.g. ["gini-raksha", "naga-raja-kolam"]

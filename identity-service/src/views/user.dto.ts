@@ -14,6 +14,19 @@ export const LoginUserSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
+export const GoogleAuthSchema = z.object({
+  id: z.string().optional(),
+  googleId: z.string().optional(),
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email address"),
+  picture: z.string().optional().or(z.literal("")),
+  avatarUrl: z.string().optional().or(z.literal("")),
+  provider: z.enum(["google", "preview"]).optional().default("google"),
+  accessToken: z.string().optional(),
+});
+
+export type GoogleAuthDto = z.infer<typeof GoogleAuthSchema>;
+
 export const UpdateProfileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").optional(),
   initials: z.string().min(1).max(4).optional(),
