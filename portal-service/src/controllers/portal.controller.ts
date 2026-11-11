@@ -273,6 +273,8 @@ export class PortalController {
         minted: true,
         certificateId,
         status: "minted",
+        ...(parsed.photos && parsed.photos.length > 0 ? { photos: parsed.photos } : {}),
+        ...(parsed.scanUrl ? { scanUrl: parsed.scanUrl, scanProgress: 100 } : {}),
         blockchain: {
           chain: "Polygon",
           contractAddress,
