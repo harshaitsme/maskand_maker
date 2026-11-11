@@ -149,18 +149,42 @@ export class NotificationController {
           break;
         }
 
+        case "listing.minted":
         case "mask.minted": {
-          const { artisanSlug, maskSlug, certId, onChainTxHash } = payload;
+          const d = payload.data || payload;
+          const artisanSlug = d.artisanSlug || payload.artisanSlug || "chandana-bandara";
+          const maskSlug = d.maskSlug || payload.maskSlug || "traditional-mask";
+          const certId = d.certificateId || d.certId || payload.certId || payload.certificateId;
+          const onChainTxHash = d.polygonAmoyTxHash || d.onChainTxHash || payload.onChainTxHash;
           await repo.create({
-            recipientId: artisanSlug || "chandana-bandara",
+            recipientId: artisanSlug,
             recipientRole: "artisan",
             channel: "in_app",
             category: "minting",
             priority: "medium",
-            title: `Certificate Minted: ${certId}`,
+            title: `Certificate Minted: ${certId || maskSlug}`,
             message: `Physical-digital provenance certificate for ${maskSlug} has been verified on Polygon Amoy.`,
             data: { certId, maskSlug, onChainTxHash },
-            link: `/verify/${certId}`,
+            link: certId ? `/verify/${certId}` : `/portal`,
+          });
+          break;
+        }
+
+        case "listing.published": {
+          const d = payload.data || payload;
+          const artisanSlug = d.artisanSlug || payload.artisanSlug || "chandana-bandara";
+          const maskTitle = d.maskTitle || d.name || d.maskSlug || "Traditional Mask";
+          const maskSlug = d.maskSlug || "traditional-mask";
+          await repo.create({
+            recipientId: artisanSlug,
+            recipientRole: "artisan",
+            channel: "in_app",
+            category: "minting",
+            priority: "medium",
+            title: `Mask Published: ${maskTitle}`,
+            message: `Your listing for ${maskTitle} is now live on the public registry!`,
+            data: d,
+            link: `/masks/${maskSlug}`,
           });
           break;
         }
