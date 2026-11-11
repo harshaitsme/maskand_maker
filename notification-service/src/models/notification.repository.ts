@@ -12,7 +12,14 @@ export class NotificationRepository {
     skip?: number;
   }): Promise<{ items: NotificationItem[]; total: number; unreadCount: number }> {
     const query: any = {};
-    if (filter.recipientId && filter.recipientId !== "all") query.recipientId = filter.recipientId;
+    if (filter.recipientId && filter.recipientId !== "all") {
+      const ids = filter.recipientId.split(",").map((s) => s.trim()).filter(Boolean);
+      if (ids.length > 1) {
+        query.recipientId = { $in: ids };
+      } else if (ids.length === 1) {
+        query.recipientId = ids[0];
+      }
+    }
     if (filter.recipientRole && filter.recipientRole !== "all") query.recipientRole = filter.recipientRole;
     if (filter.category && filter.category !== "all") query.category = filter.category;
     if (filter.channel && filter.channel !== "all") query.channel = filter.channel;
@@ -21,13 +28,15 @@ export class NotificationRepository {
     const limit = Math.min(filter.limit || 50, 100);
     const skip = filter.skip || 0;
 
+    const unreadQuery: any = { isRead: false };
+    if (query.recipientId) {
+      unreadQuery.recipientId = query.recipientId;
+    }
+
     const [docs, total, unreadCount] = await Promise.all([
       NotificationModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
       NotificationModel.countDocuments(query),
-      NotificationModel.countDocuments({
-        ...(filter.recipientId ? { recipientId: filter.recipientId } : {}),
-        isRead: false,
-      }),
+      NotificationModel.countDocuments(unreadQuery),
     ]);
 
     return {
@@ -38,6 +47,10 @@ export class NotificationRepository {
   }
 
   public async getUnreadCount(recipientId: string): Promise<number> {
+    const ids = recipientId.split(",").map((s) => s.trim()).filter(Boolean);
+    if (ids.length > 1) {
+      return NotificationModel.countDocuments({ recipientId: { $in: ids }, isRead: false });
+    }
     return NotificationModel.countDocuments({ recipientId, isRead: false });
   }
 
@@ -62,8 +75,10 @@ export class NotificationRepository {
   }
 
   public async markAllAsRead(recipientId: string): Promise<number> {
+    const ids = recipientId.split(",").map((s) => s.trim()).filter(Boolean);
+    const query = ids.length > 1 ? { recipientId: { $in: ids }, isRead: false } : { recipientId, isRead: false };
     const res = await NotificationModel.updateMany(
-      { recipientId, isRead: false },
+      query,
       { $set: { isRead: true, readAt: new Date() } }
     );
     return res.modifiedCount;

@@ -32,6 +32,8 @@ async function bootstrap() {
           "order.created",
           "order.status_updated",
           "mask.minted",
+          "listing.minted",
+          "listing.published",
           "twin.claimed",
           "settlement.recorded",
           "payout.processed",
