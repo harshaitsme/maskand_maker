@@ -114,10 +114,10 @@ def convert_image(
     remove_bg: bool = Query(True, description="Remove background automatically before 3D reconstruction"),
     foreground_ratio: float = Query(0.85, ge=0.5, le=1.0),
     mc_resolution: int = Query(
-        256,
+        192,
         ge=64,
         le=320,
-        description="Marching Cubes resolution (256 default for high fidelity, 128 for fast draft)",
+        description="Marching Cubes resolution (192 default for high fidelity, 128 for fast draft)",
     ),
     smooth_mesh: bool = Query(True, description="Apply Laplacian smoothing to eliminate voxel faceting"),
     orientation_fix: bool = Query(True, description="Rotate mesh to upright glTF viewing orientation"),

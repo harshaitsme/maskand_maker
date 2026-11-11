@@ -8,11 +8,15 @@ const PORT = process.env.PORT || 5000;
 function bootstrap() {
   const app = createApp();
 
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log(`🌐 [api-gateway] Mask & Maker API Gateway listening on http://localhost:${PORT}`);
     console.log(`📊 [api-gateway] Healthcheck: http://localhost:${PORT}/health`);
     console.log(`🏥 [api-gateway] Cluster Diagnostic: http://localhost:${PORT}/health/all`);
   });
+
+  server.timeout = 300000;
+  server.keepAliveTimeout = 65000;
+  server.headersTimeout = 66000;
 }
 
 bootstrap();

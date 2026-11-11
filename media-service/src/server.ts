@@ -36,6 +36,10 @@ async function startServer(): Promise<void> {
       console.log(`🩺 Health: http://0.0.0.0:${PORT}/health`);
     });
 
+    server.timeout = 300000;
+    server.keepAliveTimeout = 65000;
+    server.headersTimeout = 66000;
+
     // Graceful shutdown
     const shutdown = async (signal: string) => {
       console.log(`\n🛑 Received ${signal}. Gracefully shutting down...`);
