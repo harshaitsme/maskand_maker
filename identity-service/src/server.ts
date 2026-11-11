@@ -14,10 +14,11 @@ async function startServer(): Promise<void> {
     // 1. Connect to Database
     await connectDB();
 
-    // 2. Auto-seed if empty
+    // 2. Auto-seed if empty and sync admin accounts
     const userRepo = new UserRepository();
     const seedResult = await userRepo.seedInitialData(false);
-    console.log(`👤 Database populated with ${seedResult.count} users.`);
+    await userRepo.syncAdminUsers();
+    console.log(`👤 Database populated with ${seedResult.count} users. Admin accounts synchronized.`);
 
     // 3. Start Express server
     const app = createApp();

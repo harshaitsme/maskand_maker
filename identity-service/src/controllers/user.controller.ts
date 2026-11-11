@@ -13,6 +13,7 @@ import {
 import { UserView } from "../views/user.view.js";
 import { generateToken } from "../middleware/authMiddleware.js";
 import { Address } from "../models/user.entity.js";
+import { isAdminEmail } from "../config/admin.js";
 
 export class UserController {
   constructor(private userRepo: UserRepository) {}
@@ -42,11 +43,18 @@ export class UserController {
       const passwordHash = await bcrypt.hash(parsed.password, 10);
       const initials = this.extractInitials(parsed.name);
 
+      let role = parsed.role || "buyer";
+      if (isAdminEmail(parsed.email)) {
+        role = "admin";
+      } else if (role === "admin") {
+        role = "buyer"; // Prevent unauthorized admin role assignment
+      }
+
       const newUser = await this.userRepo.create({
         name: parsed.name,
         email: parsed.email.toLowerCase().trim(),
         passwordHash,
-        role: parsed.role,
+        role,
         initials,
         location: parsed.location || "Sri Lanka",
         artisanSlug: parsed.artisanSlug,
@@ -72,7 +80,7 @@ export class UserController {
     try {
       const parsed = LoginUserSchema.parse(req.body);
 
-      const user = await this.userRepo.findByEmail(parsed.email);
+      let user = await this.userRepo.findByEmail(parsed.email);
       if (!user) {
         res.status(401).json({
           success: false,
@@ -101,6 +109,11 @@ export class UserController {
         return;
       }
 
+      if (isAdminEmail(user.email) && user.role !== "admin") {
+        user = (await this.userRepo.updateRole(user.id, "admin")) || user;
+        user.role = "admin";
+      }
+
       const token = generateToken({
         userId: user.id,
         email: user.email,
@@ -119,11 +132,12 @@ export class UserController {
       const email = parsed.email.toLowerCase().trim();
       const googleId = parsed.id || parsed.googleId || "";
       const avatarUrl = parsed.picture || parsed.avatarUrl || "";
+      const isAdmin = isAdminEmail(email);
 
       let user = await this.userRepo.findByEmail(email);
 
       if (!user) {
-        // Auto-provision user with role 'buyer'
+        // Auto-provision user with role: admin if in admin whitelist, otherwise buyer
         const initials = this.extractInitials(parsed.name);
         const randomPassword = crypto.randomBytes(32).toString("hex");
         const passwordHash = await bcrypt.hash(randomPassword, 10);
@@ -132,7 +146,7 @@ export class UserController {
           name: parsed.name,
           email,
           passwordHash,
-          role: "buyer",
+          role: isAdmin ? "admin" : "buyer",
           initials,
           avatarUrl,
           authProvider: parsed.provider || "google",
@@ -144,6 +158,11 @@ export class UserController {
           isActive: true,
         });
       } else {
+        // Elevate authorized administrator if needed
+        if (isAdmin && user.role !== "admin") {
+          user = (await this.userRepo.updateRole(user.id, "admin")) || user;
+          user.role = "admin";
+        }
         // Update avatar and authProvider if not set
         if (avatarUrl && !user.avatarUrl) {
           await this.userRepo.updateProfile(user.id, { avatarUrl });
@@ -170,10 +189,15 @@ export class UserController {
         return;
       }
 
-      const user = await this.userRepo.findById(req.user.userId);
+      let user = await this.userRepo.findById(req.user.userId);
       if (!user) {
         res.status(404).json({ success: false, error: "NotFound", message: "User not found" });
         return;
+      }
+
+      if (isAdminEmail(user.email) && user.role !== "admin") {
+        user = (await this.userRepo.updateRole(user.id, "admin")) || user;
+        user.role = "admin";
       }
 
       res.status(200).json({
