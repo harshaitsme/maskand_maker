@@ -38,11 +38,15 @@ export class CatalogEventConsumer {
       // 2. Assert durable consumer queue
       await ch.assertQueue(this.queue, { durable: true });
 
-      // 3. Bind to order creation & 3D media generated events
+      // 3. Bind to order creation, 3D media, and listing lifecycle events
       await ch.bindQueue(this.queue, this.exchange, "order.created");
       await ch.bindQueue(this.queue, this.exchange, "media.3d_generated");
+      await ch.bindQueue(this.queue, this.exchange, "listing.minted");
+      await ch.bindQueue(this.queue, this.exchange, "listing.published");
 
-      console.log(`✅ [Catalog] RabbitMQ consumer listening on queue '${this.queue}' bound to 'order.created' and 'media.3d_generated'`);
+      console.log(
+        `✅ [Catalog] RabbitMQ consumer listening on queue '${this.queue}' bound to 'order.created', 'media.3d_generated', 'listing.minted', 'listing.published'`
+      );
 
       // 4. Consume messages
       await ch.consume(
@@ -74,6 +78,49 @@ export class CatalogEventConsumer {
                 if (updated) {
                   console.log(`🥽 [Catalog] Mask '${maskSlug}' updated with arAvailable=true from 3D AI service!`);
                 }
+              }
+            } else if (
+              (routingKey === "listing.minted" || routingKey === "listing.published") &&
+              content.data?.maskSlug
+            ) {
+              const d = content.data;
+              const existing = await maskRepository.findBySlug(d.maskSlug);
+              if (!existing) {
+                const maskTitle = d.maskTitle || d.name || d.maskSlug;
+                const certId = d.certificateId || `MM-2026-${Math.floor(Math.random() * 9000 + 1000)}`;
+                const image = d.photos?.[0]
+                  ? d.photos[0].startsWith("http") || d.photos[0].startsWith("/")
+                    ? d.photos[0]
+                    : `/api/media/stream/${d.photos[0]}`
+                  : "/images/masks/default.jpg";
+
+                await maskRepository.create({
+                  slug: d.maskSlug,
+                  name: maskTitle,
+                  sinhala: d.sinhala || maskTitle,
+                  tradition: d.tradition || "raksha",
+                  artisanSlug: d.artisanSlug || "chandana-bandara",
+                  priceLKR: d.priceLKR || 85000,
+                  year: new Date().getFullYear(),
+                  heightCm: d.heightCm || 44,
+                  widthCm: d.widthCm || 36,
+                  depthCm: d.depthCm || 18,
+                  weightKg: d.weightKg || 1.4,
+                  wood: d.woodType || d.woodSpecies || "Kaduru heartwood (Strychnos nux-vomica)",
+                  dyes: ["Natural Pigments", "Beeswax polish"],
+                  carvingDays: 24,
+                  image,
+                  plateSeed: 1,
+                  plateVariant: 0,
+                  story: d.story || `Hand-carved ${maskTitle} traditional wooden mask by master artisan.`,
+                  context: `Carved from sacred Kaduru in the living ${d.tradition || "raksha"} lineage of Ambalangoda.`,
+                  arAvailable: !!d.scanUrl,
+                  verified: true,
+                  stock: d.stock ?? 1,
+                  region: "Ambalangoda, Sri Lanka",
+                  certId,
+                });
+                console.log(`✨ [Catalog] Automatically created public catalog entry for newly minted mask: '${d.maskSlug}'`);
               }
             }
 

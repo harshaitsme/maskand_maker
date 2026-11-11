@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { maskRepository } from "../models/mask.repository.js";
+import { MaskModel } from "../models/mask.schema.js";
+import { Mask } from "../models/mask.entity.js";
 import { MaskView } from "../views/mask.view.js";
 import { CreateMaskSchema, MaskQuerySchema } from "../views/mask.dto.js";
 
@@ -105,12 +107,41 @@ export class MaskController {
    */
   public static async create(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const payload = CreateMaskSchema.parse(req.body);
-      const createdMask = await maskRepository.create(payload);
+      const parsed = CreateMaskSchema.parse(req.body);
+      const certId = parsed.certId || `MM-2026-${Math.floor(Math.random() * 9000 + 1000)}`;
+      const sinhala = parsed.sinhala || parsed.name;
+      const story =
+        parsed.story && parsed.story.length >= 3
+          ? parsed.story
+          : `Hand-carved ${parsed.name} traditional wooden mask by master artisan.`;
+      const context =
+        parsed.context && parsed.context.length >= 3
+          ? parsed.context
+          : `Carved from sacred ${parsed.wood} in the living ${parsed.tradition} lineage of Ambalangoda.`;
+
+      const maskData = {
+        ...parsed,
+        certId,
+        sinhala,
+        story,
+        context,
+      };
+
+      const existing = await maskRepository.findBySlug(parsed.slug);
+      let mask;
+      if (existing) {
+        mask = await MaskModel.findOneAndUpdate(
+          { slug: parsed.slug },
+          { $set: maskData },
+          { new: true }
+        ).lean();
+      } else {
+        mask = await maskRepository.create(maskData);
+      }
 
       res.status(201).json({
         message: "Mask listing created successfully",
-        mask: MaskView.render(createdMask),
+        mask: MaskView.render(mask as unknown as Mask),
       });
     } catch (error) {
       next(error);
