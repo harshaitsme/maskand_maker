@@ -310,7 +310,7 @@ export class MediaController {
       let filename = "image.jpg";
       const maskSlug = req.body.maskSlug || `mask-${Date.now()}`;
       const artisanSlug = req.body.artisanSlug || "chandana-bandara";
-      const mcResolution = Number(req.body.mc_resolution || 128);
+      const mcResolution = Number(req.body.mc_resolution || 256);
       const removeBg = req.body.remove_bg !== "false";
 
       // 1. Get input image either from uploaded file or existing MinIO asset
@@ -345,7 +345,7 @@ export class MediaController {
       formData.append("image", blob, filename);
 
       const aiRes = await fetch(
-        `${aiUrl}/convert?mc_resolution=${mcResolution}&remove_bg=${removeBg}`,
+        `${aiUrl}/convert?mc_resolution=${mcResolution}&remove_bg=${removeBg}&smooth_mesh=true&orientation_fix=true`,
         {
           method: "POST",
           body: formData,
