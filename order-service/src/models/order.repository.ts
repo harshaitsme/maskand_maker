@@ -11,6 +11,8 @@ export class OrderRepository {
    */
   public async findAll(filter?: {
     status?: OrderStatus;
+    email?: string;
+    customerEmail?: string;
     limit?: number;
     skip?: number;
   }): Promise<{ items: OrderDoc[]; total: number }> {
@@ -18,6 +20,15 @@ export class OrderRepository {
 
     if (filter?.status) {
       query.status = filter.status;
+    }
+
+    const emailFilter = filter?.email || filter?.customerEmail;
+    if (emailFilter) {
+      const emailRegex = new RegExp(`^${emailFilter.trim()}$`, "i");
+      query.$or = [
+        { customerEmail: emailRegex },
+        { "shippingAddress.email": emailRegex },
+      ];
     }
 
     const limit = Math.min(filter?.limit || 50, 100);
