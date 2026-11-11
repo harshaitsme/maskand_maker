@@ -23,7 +23,8 @@ const MaskSchema = new Schema<MaskDocument>(
     },
     sinhala: {
       type: String,
-      required: true,
+      required: false,
+      default: "",
       trim: true,
     },
     tradition: {
@@ -89,11 +90,13 @@ const MaskSchema = new Schema<MaskDocument>(
     },
     story: {
       type: String,
-      required: true,
+      required: false,
+      default: "Traditional hand-carved mask from the living heritage of Ambalangoda.",
     },
     context: {
       type: String,
-      required: true,
+      required: false,
+      default: "Ambalangoda woodcarving heritage.",
     },
     arAvailable: {
       type: Boolean,
