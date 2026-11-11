@@ -109,9 +109,14 @@ export class UserController {
         return;
       }
 
-      if (isAdminEmail(user.email) && user.role !== "admin") {
-        user = (await this.userRepo.updateRole(user.id, "admin")) || user;
-        user.role = "admin";
+      if (isAdminEmail(user.email)) {
+        if (user.role !== "admin") {
+          user = (await this.userRepo.updateRole(user.id, "admin")) || user;
+          user.role = "admin";
+        }
+      } else if (user.role === "admin") {
+        user = (await this.userRepo.updateRole(user.id, "buyer")) || user;
+        user.role = "buyer";
       }
 
       const token = generateToken({
@@ -158,10 +163,15 @@ export class UserController {
           isActive: true,
         });
       } else {
-        // Elevate authorized administrator if needed
-        if (isAdmin && user.role !== "admin") {
-          user = (await this.userRepo.updateRole(user.id, "admin")) || user;
-          user.role = "admin";
+        // Elevate authorized administrator or demote unauthorized admin claims
+        if (isAdmin) {
+          if (user.role !== "admin") {
+            user = (await this.userRepo.updateRole(user.id, "admin")) || user;
+            user.role = "admin";
+          }
+        } else if (user.role === "admin") {
+          user = (await this.userRepo.updateRole(user.id, "buyer")) || user;
+          user.role = "buyer";
         }
         // Update avatar and authProvider if not set
         if (avatarUrl && !user.avatarUrl) {
@@ -195,9 +205,14 @@ export class UserController {
         return;
       }
 
-      if (isAdminEmail(user.email) && user.role !== "admin") {
-        user = (await this.userRepo.updateRole(user.id, "admin")) || user;
-        user.role = "admin";
+      if (isAdminEmail(user.email)) {
+        if (user.role !== "admin") {
+          user = (await this.userRepo.updateRole(user.id, "admin")) || user;
+          user.role = "admin";
+        }
+      } else if (user.role === "admin") {
+        user = (await this.userRepo.updateRole(user.id, "buyer")) || user;
+        user.role = "buyer";
       }
 
       res.status(200).json({

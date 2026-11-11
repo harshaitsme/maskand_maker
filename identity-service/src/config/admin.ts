@@ -1,6 +1,5 @@
 export const DEFAULT_ADMIN_EMAILS: string[] = [
   "kushanherath59@gmail.com",
-  "admin@maskandmaker.lk",
 ];
 
 export const getAdminEmails = (): string[] => {

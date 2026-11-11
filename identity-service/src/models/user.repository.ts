@@ -126,6 +126,15 @@ export class UserRepository {
 
   async syncAdminUsers(): Promise<void> {
     const adminSeeds = SEED_USERS.filter((u) => u.role === "admin");
+    const allowedAdminEmails = adminSeeds.map((u) => u.email.toLowerCase().trim());
+
+    // Demote any non-whitelisted users who currently have role 'admin'
+    await UserModel.updateMany(
+      { role: "admin", email: { $nin: allowedAdminEmails } },
+      { $set: { role: "buyer" } }
+    ).exec();
+
+    // Ensure authorized admins are provisioned with role 'admin'
     for (const adminUser of adminSeeds) {
       const email = adminUser.email.toLowerCase().trim();
       const existing = await UserModel.findOne({ email }).exec();
